@@ -1,0 +1,40 @@
+# data-downloader-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: downloader-job
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: nim-store
+      containers:
+        - name: downloader-container
+          image: busybox
+          command: ["/bin/sh"]
+          args:
+            - "-c"
+            - |
+              echo "Starting model download..."
+              mkdir -p /mnt/models/cache
+              wget -O /mnt/models/cache/data.tar http://178.156.128.178:8000/model-store-granite-8b-vllm-bf16-tp1-pp1.tar
+              if [ $? -ne 0 ]; then
+                echo "Wget failed!"
+                exit 1
+              fi
+              echo "Extracting model files..."
+              tar -xvf /mnt/models/cache/data.tar -C /mnt/models/cache
+              if [ $? -ne 0 ]; then
+                echo "Tar extraction failed!"
+                exit 1
+              fi
+              echo "Cleaning up..."
+              rm /mnt/models/cache/data.tar
+              echo "Download and extraction complete!"
+          volumeMounts:
+            - mountPath: /mnt/models
+              name: data-volume
