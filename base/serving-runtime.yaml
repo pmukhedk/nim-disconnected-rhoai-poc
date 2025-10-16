@@ -1,0 +1,43 @@
+# serving-runtime.yaml
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: nim-air-gapped-multi-llm
+spec:
+  containers:
+    - env:
+        - name: NIM_MODEL_NAME
+          value: /mnt/models/cache/cache
+        - name: NIM_SERVED_MODEL_NAME
+          value: ibm-granite/granite-3.3-8b-instruct
+      image: quay.io/pmukhedk/nim/nvidia/llm-nim:latest
+      name: kserve-container
+      ports:
+        - containerPort: 8000
+          protocol: TCP
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: shm
+        - mountPath: /mnt/models/cache
+          name: nim-store
+        - mountPath: /opt/nim/workspace
+          name: nim-workspace
+  multiModel: false
+  protocolVersions:
+    - grpc-v2
+    - v2
+  supportedModelFormats:
+    - autoSelect: false
+      name: nim-air-gapped-multi-llm
+      priority: 1
+      version: 1.14.0
+  volumes:
+    - name: nim-store
+      persistentVolumeClaim:
+        claimName: nim-store
+    - emptyDir: {}
+      name: nim-workspace
+    - emptyDir:
+        medium: Memory
+        sizeLimit: 16Gi
+      name: shm
